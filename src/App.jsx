@@ -314,9 +314,9 @@ function StudentManagement() {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <button className="add-btn" onClick={handleAdd}>
+                    {/* <button className="add-btn" onClick={handleAdd}>
                         ➕ Thêm sinh viên
-                    </button>
+                    </button> */}
                 </div>
 
                 {loading ? (
