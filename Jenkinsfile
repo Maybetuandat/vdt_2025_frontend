@@ -200,10 +200,7 @@ pipeline {
                         
                         sh """
                             # Update tag field for frontend
-                            sed -i 's/^  tag.*/  tag: "${env.TAG_NAME}"/' helm-values/values-prod.yaml
-                            
-                            # Alternative method if tag is in different format
-                            sed -i 's/tag: .*/tag: "${env.TAG_NAME}"/' helm-values/values-prod.yaml
+                            sed -i 's/^  tag.*/  tag: "${env.TAG_NAME}"/' helm-values/values-prod.yaml 
                         """
                         
                         
