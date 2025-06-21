@@ -12,10 +12,21 @@ data:
         root /usr/share/nginx/html;
         index index.html;
         
-        location / {
-            try_files $uri $uri/ /index.html;
+        # Nginx status - PHẢI đặt TRƯỚC location /
+        location /nginx_status {
+            stub_status on;
+            access_log off;
+            allow all;
         }
         
+        # Health check endpoint
+        location /health {
+            access_log off;
+            return 200 "healthy\n";
+            add_header Content-Type text/plain;
+        }
+        
+        # API proxy
         location /api/ {
             proxy_pass http://{{ .Values.backend.serviceName }}:{{ .Values.backend.port }};
             proxy_set_header Host $host;
@@ -37,20 +48,14 @@ data:
             }
         }
         
-        # Nginx status cho nginx-exporter
-        location /nginx_status {
-            stub_status on;
-            access_log off;
-        }
-        
-        location /health {
-            access_log off;
-            return 200 "healthy\n";
-            add_header Content-Type text/plain;
-        }
-        
+        # Static files caching
         location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
             expires 1y;
             add_header Cache-Control "public, immutable";
+        }
+        
+        # Main application - PHẢI đặt CUỐI CÙNG
+        location / {
+            try_files $uri $uri/ /index.html;
         }
     }
