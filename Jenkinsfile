@@ -152,7 +152,7 @@ pipeline {
                     
                     sh """
                         docker push ${env.IMAGE_NAME}:${env.TAG_NAME}
-                        docker push ${env.IMAGE_NAME}:latest
+                    
                     """
                     
                     echo "✅ Successfully pushed frontend image to Docker Hub!"
