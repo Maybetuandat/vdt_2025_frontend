@@ -6,56 +6,98 @@ metadata:
     {{- include "frontend-chart.labels" . | nindent 4 }}
 data:
   default.conf: |
+  
+    log_format json_combined escape=json
+    '{'
+        '"timestamp":"$time_iso8601",'
+        '"remote_addr":"$remote_addr",'
+        '"method":"$request_method",'
+        '"path":"$uri",'
+        '"query_string":"$query_string",'
+        '"status":$status,'
+        '"body_bytes_sent":$body_bytes_sent,'
+        '"request_time":$request_time,'
+        '"http_referer":"$http_referer",'
+        '"http_user_agent":"$http_user_agent",'
+        '"upstream_response_time":"$upstream_response_time",'
+        '"request_id":"$request_id"'
+    '}';
+
+  
+    log_format access_log_format '$remote_addr - $remote_user [$time_local] '
+                                '"$request_method $uri $server_protocol" '
+                                '$status $body_bytes_sent $request_time';
+
     server {
         listen 80;
         server_name localhost;
         root /usr/share/nginx/html;
         index index.html;
         
+       
+        set $request_id $request_id;
         
+      
+        access_log /var/log/nginx/access.log json_combined;
+        error_log /var/log/nginx/error.log warn;
+        
+     
         location /nginx_status {
             stub_status on;
             access_log off;
             allow all;
         }
         
-        # Health check endpoint
+     
         location /health {
             access_log off;
             return 200 "healthy\n";
             add_header Content-Type text/plain;
         }
         
-        # API proxy
+       
         location /api/ {
+           
+            access_log /var/log/nginx/api_access.log json_combined;
+            
             proxy_pass http://{{ .Values.backend.serviceName }}:{{ .Values.backend.port }};
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Request-ID $request_id;
             
+          
             add_header Access-Control-Allow-Origin *;
             add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS";
-            add_header Access-Control-Allow-Headers "Origin, Content-Type, Accept, Authorization";
+            add_header Access-Control-Allow-Headers "Origin, Content-Type, Accept, Authorization, X-Request-ID";
             
+           
             if ($request_method = 'OPTIONS') {
                 add_header Access-Control-Allow-Origin *;
                 add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS";
-                add_header Access-Control-Allow-Headers "Origin, Content-Type, Accept, Authorization";
+                add_header Access-Control-Allow-Headers "Origin, Content-Type, Accept, Authorization, X-Request-ID";
                 add_header Content-Length 0;
                 add_header Content-Type text/plain;
                 return 200;
             }
         }
         
-        
+       
         location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
             expires 1y;
             add_header Cache-Control "public, immutable";
+            access_log off;  # Disable logging for static files
         }
         
-        
+       
         location / {
+            # Log frontend page requests
+            access_log /var/log/nginx/frontend_access.log access_log_format;
+            
             try_files $uri $uri/ /index.html;
+            
+            # Add headers for debugging
+            add_header X-Request-ID $request_id;
         }
     }
