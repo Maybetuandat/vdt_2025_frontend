@@ -5,7 +5,7 @@ COPY package*.json ./
 RUN npm install
 COPY . .
 
-ENV VITE_API_BASE_URL=http://192.168.122.93:30002/api/students
+
 RUN npm run build
 
 FROM nginx:alpine
