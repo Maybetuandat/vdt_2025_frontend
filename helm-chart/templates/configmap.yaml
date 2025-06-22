@@ -6,7 +6,7 @@ metadata:
     {{- include "frontend-chart.labels" . | nindent 4 }}
 data:
   default.conf: |
-  
+    # Define structured log format for better parsing
     log_format json_combined escape=json
     '{'
         '"timestamp":"$time_iso8601",'
@@ -19,11 +19,10 @@ data:
         '"request_time":$request_time,'
         '"http_referer":"$http_referer",'
         '"http_user_agent":"$http_user_agent",'
-        '"upstream_response_time":"$upstream_response_time",'
-        '"request_id":"$request_id"'
+        '"upstream_response_time":"$upstream_response_time"'
     '}';
 
-  
+    # Standard log format for simple parsing
     log_format access_log_format '$remote_addr - $remote_user [$time_local] '
                                 '"$request_method $uri $server_protocol" '
                                 '$status $body_bytes_sent $request_time';
@@ -34,30 +33,27 @@ data:
         root /usr/share/nginx/html;
         index index.html;
         
-       
-        set $request_id $request_id;
-        
-      
+        # Enable access logging with structured format
         access_log /var/log/nginx/access.log json_combined;
         error_log /var/log/nginx/error.log warn;
         
-     
+        # Nginx status endpoint for monitoring
         location /nginx_status {
             stub_status on;
             access_log off;
             allow all;
         }
         
-     
+        # Health check endpoint
         location /health {
             access_log off;
             return 200 "healthy\n";
             add_header Content-Type text/plain;
         }
         
-       
+        # API proxy with detailed logging
         location /api/ {
-           
+            # Separate log file for API requests
             access_log /var/log/nginx/api_access.log json_combined;
             
             proxy_pass http://{{ .Values.backend.serviceName }}:{{ .Values.backend.port }};
@@ -65,39 +61,35 @@ data:
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_set_header X-Request-ID $request_id;
             
-          
+            # CORS headers
             add_header Access-Control-Allow-Origin *;
             add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS";
-            add_header Access-Control-Allow-Headers "Origin, Content-Type, Accept, Authorization, X-Request-ID";
+            add_header Access-Control-Allow-Headers "Origin, Content-Type, Accept, Authorization";
             
-           
+            # Handle preflight requests
             if ($request_method = 'OPTIONS') {
                 add_header Access-Control-Allow-Origin *;
                 add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS";
-                add_header Access-Control-Allow-Headers "Origin, Content-Type, Accept, Authorization, X-Request-ID";
+                add_header Access-Control-Allow-Headers "Origin, Content-Type, Accept, Authorization";
                 add_header Content-Length 0;
                 add_header Content-Type text/plain;
                 return 200;
             }
         }
         
-       
+        # Static files with caching (no logging for performance)
         location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
             expires 1y;
             add_header Cache-Control "public, immutable";
             access_log off;  # Disable logging for static files
         }
         
-       
+        # Frontend SPA routing with logging
         location / {
             # Log frontend page requests
             access_log /var/log/nginx/frontend_access.log access_log_format;
             
             try_files $uri $uri/ /index.html;
-            
-            # Add headers for debugging
-            add_header X-Request-ID $request_id;
         }
     }
