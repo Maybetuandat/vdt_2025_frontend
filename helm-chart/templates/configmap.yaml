@@ -1,9 +1,8 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "frontend-chart.fullname" . }}-nginx-config
-  labels:
-    {{- include "frontend-chart.labels" . | nindent 4 }}
+  name: vdt-frontend-frontend-chart-nginx-config
+  namespace: vdt-app
 data:
   default.conf: |
     # Define structured log format for better parsing
@@ -22,41 +21,38 @@ data:
         '"upstream_response_time":"$upstream_response_time"'
     '}';
 
-    # Standard log format for simple parsing
-    log_format access_log_format '$remote_addr - $remote_user [$time_local] '
-                                '"$request_method $uri $server_protocol" '
-                                '$status $body_bytes_sent $request_time';
-
     server {
         listen 80;
         server_name localhost;
         root /usr/share/nginx/html;
         index index.html;
         
-        # Enable access logging with structured format
-        access_log /var/log/nginx/access.log json_combined;
-        error_log /var/log/nginx/error.log warn;
+        # Log TẤT CẢ requests ra stdout để hiện trong kubectl logs
+        access_log /dev/stdout json_combined;
+        error_log /dev/stderr warn;
         
-        # Nginx status endpoint for monitoring
+        # Nginx status endpoint
         location /nginx_status {
             stub_status on;
-            access_log off;
+            # Enable logging để test
+            access_log /dev/stdout json_combined;
             allow all;
         }
         
-        # Health check endpoint
+        # Health check endpoint - ENABLE logging để test
         location /health {
-            access_log off;
+            # Enable logging để thấy trong kubectl logs
+            access_log /dev/stdout json_combined;
             return 200 "healthy\n";
             add_header Content-Type text/plain;
         }
         
-        # API proxy with detailed logging
+        # API proxy với logging đầy đủ
         location /api/ {
-            # Separate log file for API requests
-            access_log /var/log/nginx/api_access.log json_combined;
+            # Log API requests ra stdout
+            access_log /dev/stdout json_combined;
             
-            proxy_pass http://{{ .Values.backend.serviceName }}:{{ .Values.backend.port }};
+            proxy_pass http://vdt-backend-backend-chart:8080;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -78,18 +74,18 @@ data:
             }
         }
         
-        # Static files with caching (no logging for performance)
+        # Static files - Enable logging để test
         location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
             expires 1y;
             add_header Cache-Control "public, immutable";
-            access_log off;  # Disable logging for static files
+            # Enable logging cho static files để test
+            access_log /dev/stdout json_combined;
         }
         
-        # Frontend SPA routing with logging
+        # Frontend SPA routing
         location / {
-            # Log frontend page requests
-            access_log /var/log/nginx/frontend_access.log access_log_format;
-            
+            # Log frontend requests ra stdout
+            access_log /dev/stdout json_combined;
             try_files $uri $uri/ /index.html;
         }
     }
