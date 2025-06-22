@@ -27,29 +27,29 @@ data:
         root /usr/share/nginx/html;
         index index.html;
         
-        # Log TẤT CẢ requests ra stdout để hiện trong kubectl logs
+        
         access_log /dev/stdout json_combined;
         error_log /dev/stderr warn;
         
         # Nginx status endpoint
         location /nginx_status {
             stub_status on;
-            # Enable logging để test
+            
             access_log /dev/stdout json_combined;
             allow all;
         }
         
-        # Health check endpoint - ENABLE logging để test
+        
         location /health {
-            # Enable logging để thấy trong kubectl logs
+            
             access_log /dev/stdout json_combined;
             return 200 "healthy\n";
             add_header Content-Type text/plain;
         }
         
-        # API proxy với logging đầy đủ
+        
         location /api/ {
-            # Log API requests ra stdout
+            
             access_log /dev/stdout json_combined;
             
             proxy_pass http://vdt-backend-backend-chart:8080;
@@ -74,11 +74,11 @@ data:
             }
         }
         
-        # Static files - Enable logging để test
+        
         location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
             expires 1y;
             add_header Cache-Control "public, immutable";
-            # Enable logging cho static files để test
+            
             access_log /dev/stdout json_combined;
         }
         
