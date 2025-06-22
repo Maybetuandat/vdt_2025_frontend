@@ -43,19 +43,26 @@ nodeSelector: {}
 tolerations: []
 affinity: {}
 
-# Ingress configuration (tùy chọn)
 ingress:
-  enabled: false
-  className: ""
-  annotations: {}
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization"
   hosts:
-    - host: vdt-web.local
+    - host: vdt-app.local
       paths:
         - path: /
-          pathType: ImplementationSpecific
-  tls: []
+          pathType: Prefix
+  tls:
+    - secretName: vdt-tls-secret
+      hosts:
+        - vdt-app.local
 
-# Autoscaling (tùy chọn)
 autoscaling:
   enabled: false
   minReplicas: 1
